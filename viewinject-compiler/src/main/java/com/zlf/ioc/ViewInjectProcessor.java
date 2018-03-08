@@ -1,9 +1,9 @@
 package com.zlf.ioc;
 
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -22,7 +23,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
-import javax.tools.JavaFileObject;
 
 @AutoService(Processor.class)
 public class ViewInjectProcessor extends AbstractProcessor
@@ -30,6 +30,7 @@ public class ViewInjectProcessor extends AbstractProcessor
     private Messager messager;
     private Elements elementUtils;
     private Map<String, ProxyInfo> mProxyMap = new HashMap<String, ProxyInfo>();
+    private Filer filer;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv)
@@ -38,6 +39,7 @@ public class ViewInjectProcessor extends AbstractProcessor
 
         messager = processingEnv.getMessager();
         elementUtils = processingEnv.getElementUtils();
+        filer = processingEnv.getFiler();
     }
 
     @Override
@@ -88,22 +90,29 @@ public class ViewInjectProcessor extends AbstractProcessor
         for (String key : mProxyMap.keySet())
         {
             ProxyInfo proxyInfo = mProxyMap.get(key);
-            try
-            {
-                JavaFileObject jfo = processingEnv.getFiler().createSourceFile(
-                        proxyInfo.getProxyClassFullName(),
-                        proxyInfo.getTypeElement());
-                Writer writer = jfo.openWriter();
-                writer.write(proxyInfo.generateJavaCode());
-                writer.flush();
-                writer.close();
-            } catch (IOException e)
-            {
+//            try
+//            {
+//                JavaFileObject jfo = processingEnv.getFiler().createSourceFile(
+//                        proxyInfo.getProxyClassFullName(),
+//                        proxyInfo.getTypeElement());
+//                Writer writer = jfo.openWriter();
+//                writer.write(proxyInfo.generateJavaCode());
+//                writer.flush();
+//                writer.close();
+//            } catch (IOException e)
+//            {
+//                error(proxyInfo.getTypeElement(),
+//                        "Unable to write injector for type %s: %s",
+//                        proxyInfo.getTypeElement(), e.getMessage());
+//            }
+            JavaFile javaFile = proxyInfo.brewJava();
+            try {
+                javaFile.writeTo(filer);
+            } catch (IOException e) {
                 error(proxyInfo.getTypeElement(),
                         "Unable to write injector for type %s: %s",
                         proxyInfo.getTypeElement(), e.getMessage());
             }
-
         }
         return true;
     }

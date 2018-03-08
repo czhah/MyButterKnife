@@ -1,11 +1,21 @@
 package com.zlf.ioc;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
+
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
 /**
@@ -19,6 +29,10 @@ public class ProxyInfo {
     private String packageName;
     private String proxyClassName;
     private TypeElement typeElement;
+    private ClassName targetTypeName;
+
+    private static final ClassName InterfaceName = ClassName.get("com.zlf.ioc", "ViewInject");
+    private static final ClassName VIEW = ClassName.get("android.view", "View");
 
     public static final String PROXY = "ViewInject";
 
@@ -33,6 +47,12 @@ public class ProxyInfo {
         this.packageName = packageName;
         //  className  MainActivity$$ViewInject
         this.proxyClassName = className + "$$" + PROXY;
+        // BaseActivity
+        TypeMirror typeMirror = classElement.asType();
+        TypeName targetType = TypeName.get(typeMirror);
+        if (targetType instanceof ParameterizedTypeName) {
+            this.targetTypeName = ((ParameterizedTypeName) targetType).rawType;
+        }
     }
 
     public String generateJavaCode() {
@@ -79,5 +99,93 @@ public class ProxyInfo {
 
     public TypeElement getTypeElement() {
         return typeElement;
+    }
+
+    public JavaFile brewJava() {
+        return JavaFile.builder(packageName, createType())
+                .addFileComment("Generated code from Butter Knife. Do not modify!")
+                .build();
+    }
+
+    private TypeSpec createType() {
+        TypeSpec.Builder builder = TypeSpec.classBuilder(getProxyClassFullName())
+                .addModifiers(Modifier.PUBLIC);
+        //  添加final
+
+        //  添加父类
+//        ClassName superinterface = ClassName.bestGuess("com.zs.javapoet.TestClass");
+        builder.addSuperinterface(ParameterizedTypeName.get(InterfaceName, targetTypeName))
+                //使用ClassName.bestGuess会自动导入包
+                .superclass(ClassName.bestGuess("com.zlf.ioc.ViewInject"));
+
+        //  添加私有字段(该字段指向被绑定类的引用如activity的引用等)
+        if(targetTypeName != null) {
+            builder.addField(targetTypeName, "target", Modifier.PRIVATE);
+        }
+
+        //  添加构造函数(一个参数的)
+//        builder.addMethod(createBindingConstructorForActivity());
+
+        //  添加两个参数的构造函数，并添加各种资源绑定事件(BindView，OnClick等)
+        builder.addMethod(createBindingConstructor());
+        return builder.build();
+    }
+
+    private MethodSpec createInjectMethod() {
+        MethodSpec.Builder injectMethod = MethodSpec.methodBuilder("")
+                .addModifiers(Modifier.PUBLIC);
+
+        injectMethod.addParameter(targetTypeName, "target");
+
+        //  添加参数View
+        injectMethod.addParameter(VIEW, "source");
+
+        //  绑定资源
+        for(int id: injectVariables.keySet()) {
+            VariableElement element = injectVariables.get(id);
+            addViewBinding(injectMethod, element, id);
+        }
+
+        return injectMethod.build();
+    }
+
+    private MethodSpec createBindingConstructor() {
+        MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC);
+
+        constructor.addParameter(targetTypeName, "target");
+
+        //  添加参数View
+        constructor.addParameter(VIEW, "source");
+
+        //  绑定资源
+        for(int id: injectVariables.keySet()) {
+            VariableElement element = injectVariables.get(id);
+            addViewBinding(constructor, element, id);
+        }
+
+        return constructor.build();
+    }
+
+    private void addViewBinding(MethodSpec.Builder result, VariableElement element, int id) {
+        String name = element.getSimpleName().toString();
+        String type = element.asType().toString();
+//        target.mToolbar = (Toolbar)Utils.findOptionalViewAsType(source, 2131558545, "field \'mToolbar\'", Toolbar.class);
+// Optimize the common case where there's a single binding directly to a field.
+        CodeBlock.Builder builder = CodeBlock.builder()
+                .add("target.$L = ", name);
+
+        builder.add("($T) ", type);
+        builder.add("source.findViewById($L)", id);
+        result.addStatement("$L", builder.build());
+        return;
+    }
+
+    private MethodSpec createBindingConstructorForActivity() {
+        MethodSpec.Builder builder = MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC);
+//                .addParameter(targetTypeName, "target");
+        builder.addStatement("this(target, target.getWindow().getDecorView())");
+        return builder.build();
     }
 }
