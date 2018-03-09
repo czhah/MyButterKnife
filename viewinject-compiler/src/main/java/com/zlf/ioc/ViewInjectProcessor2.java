@@ -137,7 +137,7 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
         boolean hasError = isInaccessibleViaGeneratedCode(Bind.class, "fields", element)
                 || isBindingInWrongPackage(Bind.class, element);
 
-        //  泛型的类型
+        //  T
         TypeMirror typeMirror = element.asType();
         if(typeMirror.getKind() == TypeKind.TYPEVAR) {
             TypeVariable typeVariable = (TypeVariable) typeMirror;
@@ -147,7 +147,7 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
         Name qualifiedName = enclosingElement.getQualifiedName();
         Name simpleName = element.getSimpleName();
         if(!isSubtypeOfType(typeMirror, VIEW_TYPE) && !isInterface(typeMirror)) {
-            //  判断当前元素不是View 也不是接口
+            //  check class and interface
             if (typeMirror.getKind() == TypeKind.ERROR) {
                 note(element, "@%s field with unresolved type (%s) "
                                 + "must elsewhere be generated as a View or interface. (%s.%s)",
@@ -166,7 +166,6 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
         QualifiedId qualifiedId = elementToQualifiedId(element, id);
         BindingSet.Builder builder = builderMap.get(enclosingElement);
         if(builder != null) {
-            //  待处理
             String exitingBindinggName = builder.findExistingBindingName(getId(qualifiedId));
         }else {
             builder = getOrCreateBindingBuilder(builderMap, enclosingElement);
@@ -174,7 +173,6 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
 
         String name = simpleName.toString();
         TypeName type = TypeName.get(typeMirror);
-        //  这里的判断暂不添加
         boolean required = isFieldRequired(element);
 
         builder.addField(getId(qualifiedId), new FieldViewBinding(name, type, required));
@@ -218,7 +216,7 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
     }
 
     private boolean isSubtypeOfType(TypeMirror typeMirror, String viewType) {
-        //  判断当前类以及父类 是否等于View
+        //  class is View
         if(isTypeEqual(typeMirror, viewType)) {
             return true;
         }
@@ -286,14 +284,14 @@ public class ViewInjectProcessor2 extends AbstractProcessor {
         boolean hasError = false;
         TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
 
-        //  获取该元素(类)的所有修饰符 private final static
+        //  get private final static
         Set<Modifier> modifiers = element.getModifiers();
         if(modifiers.contains(Modifier.PRIVATE) || modifiers.contains(Modifier.STATIC)) {
             error(element, "@%s %s must not be private or static. (%s.%s)", annotationClass.getSimpleName(), fields, enclosingElement.getQualifiedName());
             hasError = true;
         }
 
-        //  检查该元素的类型，包、类、接口、方法、字段...
+        //  check package、class、interface、method、field...
         if(enclosingElement.getKind() != ElementKind.CLASS) {
             error(enclosingElement, "@%s %s may only be contained in classes. (%s.%s)",
                     annotationClass.getSimpleName(), fields, enclosingElement.getQualifiedName(),

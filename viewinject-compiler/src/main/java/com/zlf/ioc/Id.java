@@ -19,7 +19,7 @@ public class Id {
 
     public Id(int value) {
         this.value = value;
-        this.code = CodeBlock.of("&L", value);
+        this.code = CodeBlock.of("$L", value);
         this.qualifed = false;
     }
 

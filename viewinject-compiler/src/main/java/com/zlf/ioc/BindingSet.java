@@ -106,6 +106,7 @@ public class BindingSet {
         }
 
         builder.addMethod(createBindingConstructor());
+        builder.addMethod(createBindingUnbindMethod());
         return builder.build();
     }
 
@@ -140,6 +141,15 @@ public class BindingSet {
         return ;
     }
 
+    private MethodSpec createBindingUnbindMethod() {
+        MethodSpec.Builder result = MethodSpec.methodBuilder("unbind")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC);
+
+        result.addCode("\n");
+//        result.addStatement("super.unbind()");
+        return result.build();
+    }
 
     static final class Builder {
         private final TypeName targetTypeName;

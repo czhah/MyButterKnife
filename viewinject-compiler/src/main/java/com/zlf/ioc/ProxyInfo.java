@@ -110,23 +110,17 @@ public class ProxyInfo {
     private TypeSpec createType() {
         TypeSpec.Builder builder = TypeSpec.classBuilder(getProxyClassFullName())
                 .addModifiers(Modifier.PUBLIC);
-        //  添加final
 
-        //  添加父类
 //        ClassName superinterface = ClassName.bestGuess("com.zs.javapoet.TestClass");
         builder.addSuperinterface(ParameterizedTypeName.get(InterfaceName, targetTypeName))
-                //使用ClassName.bestGuess会自动导入包
                 .superclass(ClassName.bestGuess("com.zlf.ioc.ViewInject"));
 
-        //  添加私有字段(该字段指向被绑定类的引用如activity的引用等)
         if(targetTypeName != null) {
             builder.addField(targetTypeName, "target", Modifier.PRIVATE);
         }
 
-        //  添加构造函数(一个参数的)
 //        builder.addMethod(createBindingConstructorForActivity());
 
-        //  添加两个参数的构造函数，并添加各种资源绑定事件(BindView，OnClick等)
         builder.addMethod(createBindingConstructor());
         return builder.build();
     }
@@ -137,10 +131,8 @@ public class ProxyInfo {
 
         injectMethod.addParameter(targetTypeName, "target");
 
-        //  添加参数View
         injectMethod.addParameter(VIEW, "source");
 
-        //  绑定资源
         for(int id: injectVariables.keySet()) {
             VariableElement element = injectVariables.get(id);
             addViewBinding(injectMethod, element, id);
@@ -155,10 +147,8 @@ public class ProxyInfo {
 
         constructor.addParameter(targetTypeName, "target");
 
-        //  添加参数View
         constructor.addParameter(VIEW, "source");
 
-        //  绑定资源
         for(int id: injectVariables.keySet()) {
             VariableElement element = injectVariables.get(id);
             addViewBinding(constructor, element, id);
@@ -188,4 +178,5 @@ public class ProxyInfo {
         builder.addStatement("this(target, target.getWindow().getDecorView())");
         return builder.build();
     }
+    //Error:Lambda coming from jar file need their interfaces on the classpath to be compiled, unknown interfaces are java.util.function.Supplier
 }

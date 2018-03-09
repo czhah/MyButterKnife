@@ -3,9 +3,10 @@ apply plugin: 'java'
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.google.auto.service:auto-service:1.0-rc2'
-    compile 'com.squareup:javapoet:1.10.0'
+    compile 'com.squareup:javapoet:1.8.0'
     compile project(':viewinject-annotation')
+    compile files('libs/javapoet-1.8.0.jar')
 }
 
-sourceCompatibility = "1.7"
-targetCompatibility = "1.7"
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
